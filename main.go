@@ -11,7 +11,7 @@ type Response struct {
 	Message string `json:"message"`
 }
 
-func HelloHandler(w http.ResponseWriter, _ *http.Request) {
+func GetTasksHandler(w http.ResponseWriter, _ *http.Request) {
 	var tasks []Task
 
 	if err := DB.Find(&tasks).Error; err != nil {
@@ -48,7 +48,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/api/tasks", HelloHandler).Methods(http.MethodGet)
+	r.HandleFunc("/api/tasks", GetTasksHandler).Methods(http.MethodGet)
 	r.HandleFunc("/api/create-task", CreateTaskHandler).Methods(http.MethodPost)
 
 	log.Fatal(http.ListenAndServe("localhost:9090", r))
