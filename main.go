@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"gorm.io/gorm/clause"
 	"log"
 	"net/http"
 	"strconv"
@@ -52,7 +53,8 @@ func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updatedTask Task
+	var updatedTask TaskUpdate
+	var returnedTask Task
 
 	err = json.NewDecoder(r.Body).Decode(&updatedTask)
 	if err != nil {
@@ -60,14 +62,39 @@ func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := DB.Model(&Task{}).Where("id = ?", formattedId).Updates(updatedTask).Error; err != nil {
+	query := DB.Model(&Task{}).
+		Clauses(clause.Returning{}).
+		Where("id = ?", formattedId)
+
+	if updatedTask.Task != nil {
+		query = query.Update("task", *updatedTask.Task)
+	}
+	if updatedTask.IsDone != nil {
+		query = query.Update("is_done", *updatedTask.IsDone)
+	}
+
+	result := query
+
+	if result.Error != nil {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(Response{Message: "task with the specified id does not exist"})
 		return
 	}
 
+	if result.RowsAffected == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(Response{Message: "task with the specified id does not exist"})
+		return
+	}
+
+	if err := result.Scan(&returnedTask).Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(Response{Message: "failed to retrieve updated task"})
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(Response{Message: "Task successfully updated"})
+	json.NewEncoder(w).Encode(returnedTask)
 }
 
 func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -86,8 +113,7 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(Response{Message: "Task successfully deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func main() {
@@ -98,9 +124,9 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/tasks", GetTasksHandler).Methods(http.MethodGet)
-	r.HandleFunc("/api/create-task", CreateTaskHandler).Methods(http.MethodPost)
-	r.HandleFunc("/api/update-task/{id:[0-9]+}", UpdateTaskHandler).Methods(http.MethodPatch)
-	r.HandleFunc("/api/delete-task/{id:[0-9]+}", DeleteTaskHandler).Methods(http.MethodDelete)
+	r.HandleFunc("/api/tasks", CreateTaskHandler).Methods(http.MethodPost)
+	r.HandleFunc("/api/tasks/{id:[0-9]+}", UpdateTaskHandler).Methods(http.MethodPatch)
+	r.HandleFunc("/api/tasks/{id:[0-9]+}", DeleteTaskHandler).Methods(http.MethodDelete)
 
 	log.Fatal(http.ListenAndServe("localhost:9090", r))
 }

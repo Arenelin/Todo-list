@@ -7,3 +7,8 @@ type Task struct {
 	Task   string `json:"task"`
 	IsDone bool   `json:"is_done"`
 }
+
+type TaskUpdate struct {
+	Task   *string `json:"task,omitempty"`
+	IsDone *bool   `json:"is_done,omitempty"`
+}
