@@ -4,9 +4,10 @@ import (
 	"github.com/Arenelin/Todo-list/internal/database"
 	"github.com/Arenelin/Todo-list/internal/handlers"
 	"github.com/Arenelin/Todo-list/internal/taskService"
-	"github.com/gorilla/mux"
+	"github.com/Arenelin/Todo-list/internal/web/tasks"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"log"
-	"net/http"
 )
 
 func main() {
@@ -16,11 +17,15 @@ func main() {
 	service := taskService.NewService(repo)
 	handler := handlers.NewHandler(service)
 
-	r := mux.NewRouter()
-	r.HandleFunc("/api/tasks", handler.GetTasksHandler).Methods(http.MethodGet)
-	r.HandleFunc("/api/tasks", handler.PostTaskHandler).Methods(http.MethodPost)
-	r.HandleFunc("/api/tasks/{id:[0-9]+}", handler.UpdateTaskByIdHandler).Methods(http.MethodPatch)
-	r.HandleFunc("/api/tasks/{id:[0-9]+}", handler.DeleteTaskByIdHandler).Methods(http.MethodDelete)
+	e := echo.New()
 
-	log.Fatal(http.ListenAndServe("localhost:9090", r))
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	strictHandler := tasks.NewStrictHandler(handler, nil)
+	tasks.RegisterHandlers(e, strictHandler)
+
+	if err := e.Start(":9090"); err != nil {
+		log.Fatalf("failed to start with err: %v", err)
+	}
 }

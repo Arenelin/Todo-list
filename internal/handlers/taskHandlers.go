@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"github.com/Arenelin/Todo-list/internal/taskService"
-	"github.com/gorilla/mux"
-	"net/http"
-	"strconv"
+	"github.com/Arenelin/Todo-list/internal/web/tasks"
 )
 
 type Response struct {
@@ -20,79 +18,80 @@ func NewHandler(service *taskService.TaskService) *Handler {
 	return &Handler{Service: service}
 }
 
-func (h *Handler) GetTasksHandler(w http.ResponseWriter, _ *http.Request) {
-	tasks, err := h.Service.GetTasks()
-
+func (h *Handler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	allTasks, err := h.Service.GetTasks()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return nil, err
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+
+	response := tasks.GetTasks200JSONResponse{}
+
+	for _, tsk := range allTasks {
+		task := tasks.Task{
+			Id:     &tsk.ID,
+			Task:   &tsk.Task,
+			IsDone: &tsk.IsDone,
+		}
+		response = append(response, task)
+	}
+
+	return response, nil
 }
 
-func (h *Handler) PostTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var task taskService.Task
+func (h *Handler) PostTasks(_ context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
+	taskRequest := request.Body
 
-	err := json.NewDecoder(r.Body).Decode(&task)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	taskToCreate := taskService.Task{
+		Task:   *taskRequest.Task,
+		IsDone: *taskRequest.IsDone,
 	}
 
-	createdTask, err := h.Service.CreateTask(task)
-
+	createdTask, err := h.Service.CreateTask(taskToCreate)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return nil, err
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdTask)
+	response := tasks.PostTasks201JSONResponse{
+		Id:     &createdTask.ID,
+		Task:   &createdTask.Task,
+		IsDone: &createdTask.IsDone,
+	}
+
+	return response, nil
 }
 
-func (h *Handler) UpdateTaskByIdHandler(w http.ResponseWriter, r *http.Request) {
-	idParam := mux.Vars(r)["id"]
+func (h *Handler) PatchTasksId(_ context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
+	idParam := request.Id
 
-	formattedId, err := strconv.Atoi(idParam)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{Message: "Invalid id sent"})
-		return
+	taskRequest := request.Body
+
+	taskToUpdate := taskService.TaskUpdate{
+		Task:   taskRequest.Task,
+		IsDone: taskRequest.IsDone,
 	}
 
-	var updatedTask taskService.TaskUpdate
-
-	err = json.NewDecoder(r.Body).Decode(&updatedTask)
+	returnedTask, err := h.Service.UpdateTaskById(idParam, taskToUpdate)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
 
-	returnedTask, err := h.Service.UpdateTaskById(uint(formattedId), updatedTask)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	response := tasks.PatchTasksId200JSONResponse{
+		Id:     &returnedTask.ID,
+		Task:   &returnedTask.Task,
+		IsDone: &returnedTask.IsDone,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(returnedTask)
+	return response, nil
 }
 
-func (h *Handler) DeleteTaskByIdHandler(w http.ResponseWriter, r *http.Request) {
-	idParam := mux.Vars(r)["id"]
+func (h *Handler) DeleteTasksId(_ context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+	idParam := request.Id
 
-	formattedId, err := strconv.Atoi(idParam)
+	err := h.Service.DeleteTask(idParam)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{Message: "Invalid id sent"})
-		return
+		return nil, err
 	}
+	response := tasks.DeleteTasksId204Response{}
 
-	err = h.Service.DeleteTask(uint(formattedId))
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	w.WriteHeader(http.StatusNoContent)
+	return response, nil
 }
