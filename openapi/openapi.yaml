@@ -8,6 +8,18 @@ paths:
       summary: Get all tasks
       tags:
         - tasks
+      requestBody:
+        description: The ID of the user who owns the task
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  format: uint
+                  description: The ID of the user who owns the task
       responses:
         '200':
           description: A list of tasks
@@ -173,6 +185,9 @@ components:
           type: string
         is_done:
           type: boolean
+        user_id:
+          type: integer
+          format: uint
     User:
       type: object
       properties:

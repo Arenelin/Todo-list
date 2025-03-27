@@ -19,6 +19,13 @@ type Task struct {
 	Id     *uint   `json:"id,omitempty"`
 	IsDone *bool   `json:"is_done,omitempty"`
 	Task   *string `json:"task,omitempty"`
+	UserId *uint   `json:"user_id,omitempty"`
+}
+
+// GetTasksJSONBody defines parameters for GetTasks.
+type GetTasksJSONBody struct {
+	// UserId The ID of the user who owns the task
+	UserId *uint `json:"user_id,omitempty"`
 }
 
 // PatchTasksIdJSONBody defines parameters for PatchTasksId.
@@ -26,6 +33,9 @@ type PatchTasksIdJSONBody struct {
 	IsDone *bool   `json:"is_done,omitempty"`
 	Task   *string `json:"task,omitempty"`
 }
+
+// GetTasksJSONRequestBody defines body for GetTasks for application/json ContentType.
+type GetTasksJSONRequestBody GetTasksJSONBody
 
 // PostTasksJSONRequestBody defines body for PostTasks for application/json ContentType.
 type PostTasksJSONRequestBody = Task
@@ -140,6 +150,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 }
 
 type GetTasksRequestObject struct {
+	Body *GetTasksJSONRequestBody
 }
 
 type GetTasksResponseObject interface {
@@ -237,6 +248,12 @@ type strictHandler struct {
 // GetTasks operation middleware
 func (sh *strictHandler) GetTasks(ctx echo.Context) error {
 	var request GetTasksRequestObject
+
+	var body GetTasksJSONRequestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+	request.Body = &body
 
 	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
 		return sh.ssi.GetTasks(ctx.Request().Context(), request.(GetTasksRequestObject))
