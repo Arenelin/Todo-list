@@ -1,5 +1,7 @@
 package userService
 
+import "github.com/Arenelin/Todo-list/internal/taskService"
+
 type UserService struct {
 	repo UserRepository
 }
@@ -10,6 +12,10 @@ func NewUserService(repo UserRepository) *UserService {
 
 func (s *UserService) GetUsers() ([]User, error) {
 	return s.repo.GetUsers()
+}
+
+func (s *UserService) GetTasksByUserID(id uint) ([]taskService.Task, error) {
+	return s.repo.GetTasksByUserId(id)
 }
 
 func (s *UserService) CreateUser(user User) (User, error) {

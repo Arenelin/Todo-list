@@ -1,12 +1,14 @@
 package userService
 
 import (
+	"github.com/Arenelin/Todo-list/internal/taskService"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type UserRepository interface {
 	GetUsers() ([]User, error)
+	GetTasksByUserId(id uint) ([]taskService.Task, error)
 	CreateUser(user User) (User, error)
 	UpdateUserById(id uint, user UserUpdate) (User, error)
 	DeleteUserById(id uint) error
@@ -24,6 +26,13 @@ func (r *userRepository) GetUsers() ([]User, error) {
 	var users []User
 	err := r.db.Find(&users).Error
 	return users, err
+}
+
+func (r *userRepository) GetTasksByUserId(id uint) ([]taskService.Task, error) {
+	var tasks []taskService.Task
+
+	err := r.db.Where("user_id = ?", id).Find(&tasks).Error
+	return tasks, err
 }
 
 func (r *userRepository) CreateUser(user User) (User, error) {

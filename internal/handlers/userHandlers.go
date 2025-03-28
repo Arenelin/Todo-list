@@ -34,6 +34,29 @@ func (h *UserHandler) GetUsers(_ context.Context, _ users.GetUsersRequestObject)
 	return response, nil
 }
 
+func (h *UserHandler) GetUsersUserIdTasks(_ context.Context, request users.GetUsersUserIdTasksRequestObject) (users.GetUsersUserIdTasksResponseObject, error) {
+	idParam := request.UserId
+
+	allUserTasks, err := h.Service.GetTasksByUserID(idParam)
+	if err != nil {
+		return nil, err
+	}
+
+	response := users.GetUsersUserIdTasks200JSONResponse{}
+
+	for _, tsk := range allUserTasks {
+		task := users.Task{
+			Id:     &tsk.ID,
+			Task:   &tsk.Task,
+			IsDone: &tsk.IsDone,
+			UserId: &tsk.UserID,
+		}
+		response = append(response, task)
+	}
+
+	return response, nil
+}
+
 func (h *UserHandler) PostUsers(_ context.Context, request users.PostUsersRequestObject) (users.PostUsersResponseObject, error) {
 	userRequest := request.Body
 

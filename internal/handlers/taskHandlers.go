@@ -14,10 +14,8 @@ func NewTaskHandler(service *taskService.TaskService) *TaskHandler {
 	return &TaskHandler{Service: service}
 }
 
-func (h *TaskHandler) GetTasks(_ context.Context, request tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
-	taskRequest := request.Body
-
-	allTasks, err := h.Service.GetTasks(taskRequest.UserId)
+func (h *TaskHandler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	allTasks, err := h.Service.GetTasks()
 	if err != nil {
 		return nil, err
 	}
